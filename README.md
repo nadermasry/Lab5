@@ -37,9 +37,9 @@ The project is designed for learning and practice with APIs, SQLite, and testing
 ## Installation and Setup
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-repo/flask-user-management-api.git
-  ```
+```bash
+git clone https://github.com/your-repo/flask-user-management-api.git
+```
 2. Activate the vitual environment
 ```bash
 python -m venv venv
@@ -88,5 +88,6 @@ Example of a PATCH request body:
   "email": "newemail@example.com",
   "phone": "1112223333"
 }
+```
 ### 4. Deleting a User
 Use the `DELETE /api/users/delete/<user_id>` endpoint to delete a user by their `user_id`.
