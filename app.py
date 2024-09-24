@@ -1,37 +1,11 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import sqlite3
+from database import connect_to_db, create_db_table
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Database connection
-def connect_to_db():
-    return sqlite3.connect('database.db')
-
-# Creating the user table
-def create_db_table():
-    try:
-        conn = connect_to_db()
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY NOT NULL,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            address TEXT NOT NULL,
-            country TEXT NOT NULL);
-        ''')
-        conn.commit()
-    except Exception as e:
-        print(f"Error creating table: {e}")
-    finally:
-        conn.close()
-
-# Create the database table when the app starts
-create_db_table()
-
-# CRUD operations
 
 # GET all users
 @app.route('/api/users', methods=['GET'])
@@ -111,7 +85,85 @@ def api_delete_user(user_id):
     finally:
         conn.close()  # Close the connection
     return jsonify({'message': 'User deleted successfully'}), 200  # Return success message
+@app.route('/api/users/patch/<int:user_id>', methods=['PATCH'])
+def api_patch_user(user_id):
+    user_updates = request.get_json()  # Get the JSON object with updated fields
+
+    try:
+        conn = connect_to_db()
+        cur = conn.cursor()
+
+        # Build the SQL query dynamically based on the provided fields
+        fields_to_update = []
+        values = []
+        
+        if "name" in user_updates:
+            fields_to_update.append("name = ?")
+            values.append(user_updates["name"])
+        if "email" in user_updates:
+            fields_to_update.append("email = ?")
+            values.append(user_updates["email"])
+        if "phone" in user_updates:
+            fields_to_update.append("phone = ?")
+            values.append(user_updates["phone"])
+        if "address" in user_updates:
+            fields_to_update.append("address = ?")
+            values.append(user_updates["address"])
+        if "country" in user_updates:
+            fields_to_update.append("country = ?")
+            values.append(user_updates["country"])
+
+        if not fields_to_update:
+            return jsonify({'error': 'No valid fields to update'}), 400
+
+        values.append(user_id)  # Append the user_id to the end for the WHERE clause
+
+        query = f"UPDATE users SET {', '.join(fields_to_update)} WHERE user_id = ?"
+        cur.execute(query, values)
+        conn.commit()
+
+        # Fetch the updated user
+        updated_user = get_user_by_id(user_id)
+        if not updated_user:
+            return jsonify({'error': 'User not found'}), 404
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 400
+    finally:
+        conn.close()
+
+    return jsonify(updated_user), 200
+
+def get_user_by_id(user_id):
+    user = {}
+    try:
+        conn = connect_to_db()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+        row = cur.fetchone()
+
+        if row:
+            user["user_id"] = row["user_id"]
+            user["name"] = row["name"]
+            user["email"] = row["email"]
+            user["phone"] = row["phone"]
+            user["address"] = row["address"]
+            user["country"] = row["country"]
+        else:
+            user = None  # If user_id not found, return None
+
+    except Exception as e:
+        print(f"Error fetching user by id: {e}")
+        user = {}
+
+    finally:
+        conn.close()
+
+    return user
 
 # Run the app
 if __name__ == "__main__":
+    create_db_table()
     app.run(debug=True)
