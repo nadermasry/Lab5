@@ -68,6 +68,7 @@ The `POST /api/users/add` endpoint allows you to add a user. The JSON object sen
   "address": "123 Elm Street",
   "country": "USA"
 }
+```
 The response will return the newly added user with the user_id.
 
 ### 2. Getting All Users or a Single User
